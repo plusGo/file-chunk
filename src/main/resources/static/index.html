@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>TmacFront</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <script src="https://cdn.bootcss.com/jquery/1.9.0/jquery.js"></script>
+</head>
+<body>
+<label for="file">大文件上传</label>
+<input type="file" id="file">
+</body>
+<script>
+    document.querySelector('#file').addEventListener("change", function (e) {
+        var file = e.target.files[0]; // 获取input的file对象
+
+        var context = createContext(file);
+
+        var chunks = slice(file);
+        var callLength = {count: chunks.length};
+        chunks.forEach(function (chunk, index) {
+            var formData = new FormData();
+            formData.append('file', chunk);
+            formData.append('context', context);
+            formData.append('chunk', index + 1);
+            postFile(formData, callLength, function () {
+                mkfile(context, chunks.length, file.name);
+            });
+        })
+
+
+    });
+
+    function slice(file, piece) {
+        piece = piece || 1024 * 1024 * 10;
+        var totalSize = file.size; // 文件总大小
+        var start = 0;
+        var end = start + piece;
+        var chunks = [];
+        while (start < totalSize) {
+            var blob = file.slice(start, end);
+            chunks.push(blob);
+
+            start = end;
+            end = start + piece;
+        }
+        return chunks;
+    }
+
+    function postFile(formData, callLength, callBack) {
+        $.ajax({
+            type: "POST",
+            url: '/fileUpload',
+            data: formData,
+            success: function () {
+                callLength.count--;
+                if (callLength.count === 0) {
+                    alert(1);
+                    callBack();
+                }
+            },
+            dataType: "json",
+            processData: false,  // 不处理数据
+            contentType: false   // 不设置内容类型
+        });
+    }
+
+    function createContext(file) {
+        return file.name + file.size;
+    }
+
+    function mkfile(context, chunks, fileName) {
+        $.ajax({
+            type: "POST",
+            url: '/mkfile?context=' + context + '&chunks=' + chunks + "&fileName=" + fileName,
+            success: function () {
+            },
+            dataType: "json",
+        });
+    }
+</script>
+</html>
